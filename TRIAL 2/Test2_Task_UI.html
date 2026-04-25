@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task UI</title>
+</head>
+<body>
+  <h1>Tasks</h1>
+
+  <form id="add-task-form">
+    <label for="title">New task title:</label>
+    <input id="title" name="title" type="text" required />
+    <button type="submit">Add Task</button>
+  </form>
+
+  <p id="message" aria-live="polite"></p>
+
+  <ul id="task-list"></ul>
+
+  <script>
+    const taskList = document.getElementById('task-list');
+    const addTaskForm = document.getElementById('add-task-form');
+    const titleInput = document.getElementById('title');
+    const messageEl = document.getElementById('message');
+
+    function setMessage(text) {
+      messageEl.textContent = text;
+    }
+
+    async function loadTasks() {
+      setMessage('Loading tasks...');
+      try {
+        const response = await fetch('/tasks');
+        if (!response.ok) {
+          throw new Error('Failed to load tasks');
+        }
+
+        const data = await response.json();
+        renderTasks(data.tasks || []);
+        setMessage('');
+      } catch (error) {
+        setMessage(error.message);
+      }
+    }
+
+    function renderTasks(tasks) {
+      taskList.innerHTML = '';
+
+      if (tasks.length === 0) {
+        const empty = document.createElement('li');
+        empty.textContent = 'No tasks yet.';
+        taskList.appendChild(empty);
+        return;
+      }
+
+      tasks.forEach(function (task) {
+        const li = document.createElement('li');
+
+        const text = document.createElement('span');
+        text.textContent = task.title + ' (' + task.status + ') ';
+        li.appendChild(text);
+
+        const doneButton = document.createElement('button');
+        doneButton.type = 'button';
+        doneButton.textContent = 'Mark Done';
+        doneButton.disabled = task.status === 'done';
+        doneButton.addEventListener('click', function () {
+          markDone(task.id);
+        });
+        li.appendChild(doneButton);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.textContent = 'Delete';
+        deleteButton.addEventListener('click', function () {
+          deleteTask(task.id);
+        });
+        li.appendChild(deleteButton);
+
+        taskList.appendChild(li);
+      });
+    }
+
+    async function addTask(title) {
+      const response = await fetch('/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(function () { return {}; });
+        throw new Error(err.message || 'Failed to add task');
+      }
+    }
+
+    async function markDone(id) {
+      try {
+        const response = await fetch('/tasks/' + id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'done' })
+        });
+
+        if (!response.ok) {
+          const err = await response.json().catch(function () { return {}; });
+          throw new Error(err.message || 'Failed to update task');
+        }
+
+        await loadTasks();
+      } catch (error) {
+        setMessage(error.message);
+      }
+    }
+
+    async function deleteTask(id) {
+      try {
+        const response = await fetch('/tasks/' + id, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          const err = await response.json().catch(function () { return {}; });
+          throw new Error(err.message || 'Failed to delete task');
+        }
+
+        await loadTasks();
+      } catch (error) {
+        setMessage(error.message);
+      }
+    }
+
+    addTaskForm.addEventListener('submit', async function (event) {
+      event.preventDefault();
+
+      const title = titleInput.value.trim();
+      if (!title) {
+        setMessage('Title is required.');
+        return;
+      }
+
+      try {
+        await addTask(title);
+        titleInput.value = '';
+        setMessage('Task added.');
+        await loadTasks();
+      } catch (error) {
+        setMessage(error.message);
+      }
+    });
+
+    loadTasks();
+  </script>
+</body>
+</html>

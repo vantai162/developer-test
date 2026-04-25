@@ -2,9 +2,9 @@
   "name": "launchmen-task-api",
   "version": "1.0.0",
   "description": "Starter file for Launchmen Task API — Developer Test",
-  "main": "server.js",
+  "main": "Test_2_server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node Test_2_server.js"
   },
   "dependencies": {
     "express": "^4.18.2"
